@@ -28,7 +28,11 @@ public class TimerService extends Service {
             @Override
             public void onTick(long millisUntilFinished) {
                 remainingTimeInMillis = millisUntilFinished;
-                // You can use a broadcast receiver to update UI in MainActivity
+
+                // Broadcast the remaining time to the activity
+                Intent broadcastIntent = new Intent("com.example.TIMER_UPDATE");
+                broadcastIntent.putExtra("remainingTime", remainingTimeInMillis);
+                sendBroadcast(broadcastIntent);
             }
 
             @Override

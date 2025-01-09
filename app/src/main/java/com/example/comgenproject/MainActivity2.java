@@ -1,5 +1,7 @@
 package com.example.comgenproject;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
@@ -156,6 +158,7 @@ public class MainActivity2 extends AppCompatActivity {
         startButton.setLayoutParams(startButtonParams);
         parentRLayout.addView(startButton);
 
+
         // Set onClickListener for Start Button
         startButton.setOnClickListener(v -> {
             if (isTimerRunning) {
@@ -180,20 +183,59 @@ public class MainActivity2 extends AppCompatActivity {
             int seconds = Integer.parseInt(secondsStr);
 
             // Convert hours, minutes, and seconds to total milliseconds
-            totalTimeInMillis = (hours * 3600 + minutes * 60 + seconds) * 1000;
+            long totalTimeInMillis = (hours * 3600 + minutes * 60 + seconds) * 1000;
 
-            if (totalTimeInMillis == 0) {
-                Toast.makeText(this, "Please select a valid time!", Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            // Start the countdown timer
-            startTimer();
+            // Start the service to run the timer
+            Intent serviceIntent = new Intent(MainActivity2.this, TimerService.class);
+            serviceIntent.putExtra("totalTimeInMillis", totalTimeInMillis);
+            startService(serviceIntent);
         });
 
+        // Register a BroadcastReceiver to receive the timer updates
+        registerReceiver(timerReceiver, new IntentFilter("com.example.TIMER_UPDATE"));
 
+
+        // Start Button
+        Button blueButton = new Button(this);
+
+        blueButton.setText("Blue Timer");
+        blueButton.setId(TextView.generateViewId());
+        RelativeLayout.LayoutParams blueButtonParams = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+        );
+
+        blueButton.setOnClickListener(v -> {
+            Intent i = new Intent(getApplicationContext(),BlueActivity.class);
+            startActivity(i);
+        });
+
+        blueButtonParams.addRule(RelativeLayout.BELOW, startButton.getId());
+        blueButtonParams.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        blueButtonParams.setMargins(0, 20, 0, 0);
+        blueButton.setLayoutParams(blueButtonParams);
+        parentRLayout.addView(blueButton);
+
+        // Set the layout as the content view
         setContentView(parentRLayout);
+    }
 
+    // BroadcastReceiver to receive the timer updates from the service
+    private final BroadcastReceiver timerReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            long remainingTimeInMillis = intent.getLongExtra("remainingTime", 0);
+            if (remainingTimeInMillis > 0) {
+                updateTimerText(remainingTimeInMillis);
+            }
+        }
+    };
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // Unregister the BroadcastReceiver when the activity is destroyed
+        unregisterReceiver(timerReceiver);
     }
 
     private void getChargeState() {
@@ -224,30 +266,10 @@ public class MainActivity2 extends AppCompatActivity {
         }
     }
 
-    private void startTimer() {
-        countDownTimer = new CountDownTimer(totalTimeInMillis, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                isTimerRunning = true;
-                totalTimeInMillis = millisUntilFinished;
-                updateTimerText();
-            }
-
-            @Override
-            public void onFinish() {
-                isTimerRunning = false;
-                timerTextView.setText("Time's up!");
-                Toast.makeText(MainActivity2.this, "Timer Finished!", Toast.LENGTH_SHORT).show();
-            }
-        }.start();
-    }
-
-    private void updateTimerText() {
-        int hours = (int) (totalTimeInMillis / (1000 * 60 * 60));
-        int minutes = (int) (totalTimeInMillis % (1000 * 60 * 60)) / (1000 * 60);
-        int seconds = (int) (totalTimeInMillis % (1000 * 60)) / 1000;
-
-        // Format the time and update the TextView
+    private void updateTimerText(long remainingTimeInMillis) {
+        int hours = (int) (remainingTimeInMillis / 3600000);
+        int minutes = (int) (remainingTimeInMillis % 3600000) / 60000;
+        int seconds = (int) (remainingTimeInMillis % 60000) / 1000;
         String timeFormatted = String.format("%02dh %02dm %02ds", hours, minutes, seconds);
         timerTextView.setText(timeFormatted);
     }
